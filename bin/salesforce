@@ -1,0 +1,143 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use Symfony\Component\Console\Application;
+use Illuminate\Container\Container;
+use Illuminate\Support\Facades\Facade;
+use Illuminate\Config\Repository as ConfigRepository;
+use Illuminate\Events\Dispatcher;
+use Dotenv\Dotenv;
+
+$dotenv = Dotenv::createImmutable(getcwd());
+$dotenv->safeLoad();
+
+foreach ($_ENV as $key => $value) {
+    if (!getenv($key)) {
+        putenv("$key=$value");
+    }
+}
+
+if (!getenv('SF_CONSUMER_KEY') || !getenv('SF_CONSUMER_SECRET') || !getenv('SF_USERNAME') || !getenv('SF_PASSWORD')) {
+    echo "⚠️  No se cargó el archivo .env. Verifica que esté en el mismo directorio desde donde ejecutas este comando.\n";
+}
+
+$container = new Container();
+Facade::setFacadeApplication($container);
+$container->instance('events', new Dispatcher($container));
+
+$forrestConfig = [
+        'authentication' => getenv('SF_AUTH') ?: 'UserPassword',
+        'credentials' => [
+                'consumerKey'    => getenv('SF_CONSUMER_KEY'),
+                'consumerSecret' => getenv('SF_CONSUMER_SECRET'),
+                'callbackURI'    => getenv('SF_CALLBACK_URI') ?: 'http://localhost/callback',
+                'loginURL'       => getenv('SF_LOGIN_URL') ?: 'https://login.salesforce.com',
+
+                'username'       => getenv('SF_USERNAME'),
+                'password'       => getenv('SF_PASSWORD'),
+        ],
+        'parameters' => [
+                'display'  => '',
+                'immediate'=> false,
+                'state'    => '',
+                'scope'    => '',
+                'prompt'   => '',
+        ],
+        'defaults' => [
+                'method'          => 'get',
+                'format'          => 'json',
+                'compression'     => false,
+                'compressionType' => 'gzip',
+        ],
+        'storage' => [
+                'type'          => 'object',
+                'path'          => 'forrest_',
+                'expire_in'     => 60,
+                'store_forever' => false,
+        ],
+        'version'     => '',
+        'instanceURL' => '',
+        'language'    => 'en_US',
+];
+
+$container->instance('config', new ConfigRepository(['forrest' => $forrestConfig]));
+
+if (!function_exists('config_path')) {
+    function config_path($path = '')
+    {
+        return __DIR__ . '/../config' . ($path ? '/' . $path : $path);
+    }
+}
+
+if (!function_exists('config')) {
+    function config($key = null, $default = null)
+    {
+        global $container;
+        if (!$key) {
+            return $container->make('config');
+        }
+
+        $config = $container->make('config');
+        return $config->get($key, $default);
+    }
+}
+
+if (!function_exists('app')) {
+    function app($abstract = null, array $parameters = [])
+    {
+        global $container;
+
+        if (is_null($abstract)) {
+            return $container;
+        }
+
+        return $container->make($abstract, $parameters);
+    }
+}
+
+use Illuminate\Http\Request;
+if (!class_exists(Request::class)) {
+    $container->instance('request', new stdClass());
+} else {
+    $container->instance('request', Request::createFromGlobals());
+}
+
+use Illuminate\Contracts\Encryption\Encrypter;
+if (!interface_exists(Encrypter::class)) {
+    $container->instance('encrypter', new class {
+        public function encrypt($v,$s=true){return $v;}
+        public function decrypt($v,$u=true){return $v;}
+    });
+} else {
+    $container->instance('encrypter', new class implements Encrypter {
+        public function encrypt($v,$s=true){return $v;}
+        public function decrypt($v,$u=true){return $v;}
+        public function getKey(){return 'fake-key';}
+        public function getAllKeys(){return ['fake-key'];}
+        public function getPreviousKeys(){return [];}
+    });
+}
+
+use Illuminate\Routing\Redirector;
+if (class_exists(Redirector::class)) {
+    $container->instance('redirect', new class extends Redirector {
+        public function __construct() {}
+        public function to($path,$status=302,$headers=[],$secure=null){return $path;}
+    });
+} else {
+    $container->instance('redirect', new class {
+        public function to($path,$status=302,$headers=[],$secure=null){return $path;}
+    });
+}
+
+$provider = new \Omniphx\Forrest\Providers\Laravel\ForrestServiceProvider($container);
+$provider->register();
+if (method_exists($provider, 'boot')) {
+    $provider->boot();
+}
+$application = new Application('AMX Salesforce CLI', '1.0');
+$application->add(new \Amx\Salesforce\Console\Commands\SyncSalesforceObject());
+$application->add(new \Amx\Salesforce\Console\Commands\MakeSalesforceObject());
+$application->run();

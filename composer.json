@@ -1,20 +1,29 @@
 {
-    "name": "amx/package-boilerplate",
+    "name": "amx/salesforce",
+    "description": "A salesforce integration package for Php applications.",
     "type": "library",
     "require": {
         "php": "^8.2",
-        "inertiajs/inertia-laravel": "^2.0",
-        "laravel/framework": "^12.0"
+        "omniphx/forrest": "2.*",
+        "illuminate/container": "^12.32",
+        "symfony/console": "^7.3",
+        "illuminate/support": "^12.32",
+        "illuminate/config": "^12.32",
+        "illuminate/events": "^12.32",
+        "vlucas/phpdotenv": "^5.6"
     },
     "autoload": {
         "psr-4": {
-            "Amx\\PackageBoilerplate\\": "src/"
+            "Amx\\Salesforce\\": "src/"
         }
     },
+    "bin": [
+      "bin/salesforce"
+    ],
     "extra": {
         "laravel": {
             "providers": [
-                "Amx\\PackageBoilerplate\\Providers\\PackageServiceProvider"
+                "Amx\\Salesforce\\Providers\\SalesforceServiceProvider"
             ]
         }
     },
