@@ -16,27 +16,19 @@ class SFCase extends SFBaseObject
             throw new \InvalidArgumentException("The SFAccount objects must contain valid Id values.");
         }
 
-        $caseData['OriginalAgency__c'] = $issuer->Id;
-        $caseData['Agency__c'] = $applicant->Id;
-
-        $newCase = $this->client()->create($this->sObject, $caseData);
+        $newCase = $this->create($caseData['case']);
 
         if (!empty($caseData['Status'])) {
-            $this->client()->update($this->sObject, $newCase['id'], [
-                'Status' => $caseData['Status']
+            $this->client()->object("$this->sObject/Id/{$newCase['id']}", [
+                'Status' =>  $caseData["case"]["status"],
+                'Corporativo__c' => $issuer["Id"],
+                'se_cobra__c' => $issuer["Id"],
+                'CurrencyIsoCode' => "USD",
+                'Monto_Waiver__c' => $caseData["case"]["waiver"],
             ]);
         }
 
-        return $this->findById($newCase['id'], ['Id','CaseNumber','Status'])->toArray();
-    }
-
-    public function getById(string $caseId)
-    {
-        return $this->client()
-            ->select(['codigo_it__c', 'CaseNumber'])
-            ->from('Case')
-            ->where(["Id", "=", $caseId])
-            ->execute()["records"][0];
+        return $this->findById($newCase['id'], ['Id', 'CaseNumber', 'codigo_it__c'])->toArray();
     }
 
     public function create(array $data)

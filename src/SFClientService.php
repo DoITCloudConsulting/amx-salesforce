@@ -143,21 +143,6 @@ class SFClientService
         return Forrest::query($query);
     }
 
-    public function create(string $object, array $data): array
-    {
-        return Forrest::sobjects($object)->create($data);
-    }
-
-    public function update(string $object, string $id, array $data): array
-    {
-        return Forrest::sobjects($object)->update($id, $data);
-    }
-
-    public function delete(string $object, string $id): array
-    {
-        return Forrest::sobjects($object)->delete($id);
-    }
-
     public function object(string $object, array $options = []): mixed
     {
         return Forrest::sobjects($object, $options);
