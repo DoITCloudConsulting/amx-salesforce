@@ -5,11 +5,7 @@
     "require": {
         "php": "^8.2",
         "omniphx/forrest": "2.*",
-        "illuminate/container": "^12.32",
         "symfony/console": "^7.3",
-        "illuminate/support": "^12.32",
-        "illuminate/config": "^12.32",
-        "illuminate/events": "^12.32",
         "vlucas/phpdotenv": "^5.6"
     },
     "autoload": {
