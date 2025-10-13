@@ -59,4 +59,14 @@ class SFAccount extends SFBaseObject
             ->orWhere(['Home_IATA__c', '=', $stationNumber])
             ->execute();
     }
+
+    public function getByBranch(string $branch, int $limit = 1): array
+    {
+        return $this->client()
+            ->select(['Id','IATA__c','Branches__c','RecordType.Id','RecordType.Name','CurrencyIsoCode', 'Home_IATA__c'])
+            ->from($this->sObject)
+            ->where(['Branches__c', '=', $branch])
+            ->limit($limit)
+            ->execute();
+    }
 }
