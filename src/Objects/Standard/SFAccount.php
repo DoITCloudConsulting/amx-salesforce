@@ -12,20 +12,13 @@ class SFAccount extends SFBaseObject
 
     protected string $sObject = 'Account';
 
-    public function allFields(): array
-    {
-        return array_merge($this->getBaseFields(), $this->getAccountFields());
-    }
-
-    public function getByIATA(): array
+    public function getByIATA(): ?SFAccount
     {
         if (empty($this->Branches__c) && empty($this->Home_IATA__c)) {
             throw new \InvalidArgumentException("The Branches__c or Home_IATA__c property must be set.");
         }
 
-//        $id_salesforce = Salesforce::query('SELECT Id, ParentId, Name, Branches__c, Home_IATA__c, Cuenta_Principal_NG__c, Cuenta_Principal_NG2__c, RecordType.Name FROM Account Where ( Branches__c = \'' . $IATA . '\' OR Home_IATA__c = \'' . $IATA . '\' ) AND (RecordType__c = \'N2 Agency (IATA Branch)\' OR RecordType__c = \'N1 Agency (Home IATA)\') LIMIT 1');
-
-        return $this->client()
+        $response = $this->client()
             ->select([
                 'Id',
                 'ParentId',
@@ -47,26 +40,46 @@ class SFAccount extends SFBaseObject
             ], 'OR')
             ->limit(1)
             ->execute();
+
+        return $this->hydrateResponse($response);
     }
 
-    public function getByStationNumber(string $stationNumber): array
+    public function getByStationNumber(?string $stationNumber = null): SFAccount|array|null
     {
-        return $this->client()
-            ->select(['Id','IATA__c','Branches__c','RecordType.Id','RecordType.Name','Home_IATA__c'])
+        $stationNumber ??= $this->IATA__c ?? $this->Branches__c ?? $this->Home_IATA__c;
+        $recordTypeId  = $this->RecordTypeId ?? null;
+
+        if (empty($stationNumber)) {
+            throw new \InvalidArgumentException("Station number not provided or found in instance.");
+        }
+
+        $query = $this->client()
+            ->select(['Id', 'IATA__c', 'Branches__c', 'RecordType.Id', 'RecordType.Name', 'Home_IATA__c'])
             ->from($this->sObject)
-            ->where(['IATA__c', '=', $stationNumber])
-            ->orWhere(['Branches__c', '=', $stationNumber])
-            ->orWhere(['Home_IATA__c', '=', $stationNumber])
-            ->execute();
+            ->where([
+                ['IATA__c', '=', $stationNumber],
+                ['Branches__c', '=', $stationNumber],
+                ['Home_IATA__c', '=', $stationNumber],
+            ], 'OR');
+
+        if (!empty($recordTypeId)) {
+            $query->where(['RecordType.Id', '=', $recordTypeId]);
+        }
+
+        $response = $query->execute();
+
+        return $this->hydrateResponse($response);
     }
 
-    public function getByBranch(string $branch, int $limit = 1): array
+    public function getByBranch(string $branch, int $limit = 1): SFAccount|array|null
     {
-        return $this->client()
-            ->select(['Id','IATA__c','Branches__c','RecordType.Id','RecordType.Name','CurrencyIsoCode', 'Home_IATA__c'])
+        $response = $this->client()
+            ->select(['Id', 'IATA__c', 'Branches__c', 'RecordType.Id', 'RecordType.Name', 'CurrencyIsoCode', 'Home_IATA__c'])
             ->from($this->sObject)
             ->where(['Branches__c', '=', $branch])
             ->limit($limit)
             ->execute();
+
+        return $this->hydrateResponse($response);
     }
 }

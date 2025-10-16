@@ -10,13 +10,19 @@ class SFCase extends SFBaseObject
 {
     protected string $sObject = 'Case';
 
-    public function createCase(array $caseData, SFAccount $issuer, SFAccount $applicant): array
+    public function createCase(array $caseData, SFAccount $issuer, SFAccount $applicant): SFCase | array | null
     {
         if (empty($issuer->Id) || empty($applicant->Id)) {
             throw new \InvalidArgumentException("The SFAccount objects must contain valid Id values.");
         }
 
-        $newCase = $this->create($caseData['case']);
+        $newCase = $this->create([
+            ...$caseData,
+            "case" => [
+                ...$caseData["case"],
+                "status" => "Nuevo",
+            ],
+        ]);
 
         if (!empty($caseData['Status'])) {
             $this->client()->object("$this->sObject/Id/{$newCase['id']}", [
