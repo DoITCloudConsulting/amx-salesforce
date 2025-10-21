@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Amx\Salesforce\Objects\Standard;
 
 use Amx\Salesforce\Traits\Standard\SFAccountFields;
@@ -12,41 +11,9 @@ class SFAccount extends SFBaseObject
 
     protected string $sObject = 'Account';
 
-    public function getByIATA(): ?SFAccount
-    {
-        if (empty($this->Branches__c) && empty($this->Home_IATA__c)) {
-            throw new \InvalidArgumentException("The Branches__c or Home_IATA__c property must be set.");
-        }
-
-        $response = $this->client()
-            ->select([
-                'Id',
-                'ParentId',
-                'Name',
-                'Branches__c',
-                'Home_IATA__c',
-                'Cuenta_Principal_NG__c',
-                'Cuenta_Principal_NG2__c',
-                'RecordType.Name'
-            ])
-            ->from($this->sObject)
-            ->where([
-                ['Branches__c', '=', $this->Branches__c],
-                ['Home_IATA__c', '=', $this->Home_IATA__c],
-            ], 'OR')
-            ->where([
-                ['RecordType__c', '=', 'N2 Agency (IATA Branch)'],
-                ['RecordType__c', '=', 'N1 Agency (Home IATA)'],
-            ], 'OR')
-            ->limit(1)
-            ->execute();
-
-        return $this->hydrateResponse($response);
-    }
-
     public function getByStationNumber(?string $stationNumber = null): SFAccount|array|null
     {
-        $stationNumber ??= $this->IATA__c ?? $this->Branches__c ?? $this->Home_IATA__c;
+        $stationNumber ??= $this->IATA__c ?? $this->Branches__c ?? $this->Home_IATA__c ?? $this->Codigo__c;
         $recordTypeId  = $this->RecordTypeId ?? null;
 
         if (empty($stationNumber)) {
@@ -54,15 +21,16 @@ class SFAccount extends SFBaseObject
         }
 
         $query = $this->client()
-            ->select(['Id', 'IATA__c', 'Branches__c', 'RecordType.Id', 'RecordType.Name', 'Home_IATA__c'])
+            ->select(['Id', 'Name', 'IATA__c', 'Branches__c', 'Home_IATA__c', 'Codigo__c', 'RecordType.Id', 'RecordType.Name'])
             ->from($this->sObject)
             ->where([
                 ['IATA__c', '=', $stationNumber],
                 ['Branches__c', '=', $stationNumber],
                 ['Home_IATA__c', '=', $stationNumber],
+                ['Codigo__c', '=', $stationNumber],
             ], 'OR');
 
-        if (!empty($recordTypeId)) {
+        if ($recordTypeId) {
             $query->where(['RecordType.Id', '=', $recordTypeId]);
         }
 
@@ -71,13 +39,46 @@ class SFAccount extends SFBaseObject
         return $this->hydrateResponse($response);
     }
 
-    public function getByBranch(string $branch, int $limit = 1): SFAccount|array|null
+    public function getByParent(string $parentId): SFAccount|array|null
     {
         $response = $this->client()
-            ->select(['Id', 'IATA__c', 'Branches__c', 'RecordType.Id', 'RecordType.Name', 'CurrencyIsoCode', 'Home_IATA__c'])
+            ->select(['Id', 'ParentId', 'Name', 'Branches__c', 'Home_IATA__c', 'Cuenta_Principal_NG__c', 'Cuenta_Principal_NG2__c', 'RecordType.Name'])
             ->from($this->sObject)
-            ->where(['Branches__c', '=', $branch])
+            ->where(['ParentId', '=', $parentId])
+            ->execute();
+
+        return $this->hydrateResponse($response);
+    }
+
+    public function getPrincipalAccount(string $id, string $recordTypeName, int $limit = 1): SFAccount|array|null
+    {
+        $response = $this->client()
+            ->select(['Id', 'ParentId', 'Name', 'Branches__c', 'Home_IATA__c', 'RecordType.Name'])
+            ->from($this->sObject)
+            ->where(['Id', '=', $id])
+            ->where(['RecordType.Name', '=', $recordTypeName])
             ->limit($limit)
+            ->execute();
+
+        return $this->hydrateResponse($response);
+    }
+
+    public function searchAdvancedByStation(string $stationNumber): SFAccount|array|null
+    {
+        $response = $this->client()
+            ->select([
+                'Id', 'Home_IATA__c', 'IATA__c', 'Branches__c',
+                'RecordType.Name', 'Tipo_de_Cliente__c', 'Name', 'Codigo__c', 'Tipo_de_grupo__c'
+            ])
+            ->from($this->sObject)
+            ->where([
+                ['IATA__c', '=', $stationNumber],
+                ['Branches__c', '=', $stationNumber],
+                ['Codigo__c', '=', $stationNumber],
+                ['Home_IATA__c', '=', $stationNumber]
+            ], 'OR')
+            ->whereRaw("(RecordType.Name IN ('N2 Agency (IATA Branch)', 'Tiendas de viaje', 'Grupos'))")
+            ->whereRaw("(Tipo_de_grupo__c = 'GRUPOS' OR Tipo_de_Cliente__c LIKE '%WAIVERS%' OR Tipo_de_Cliente__c LIKE '%SERVICIO%')")
             ->execute();
 
         return $this->hydrateResponse($response);

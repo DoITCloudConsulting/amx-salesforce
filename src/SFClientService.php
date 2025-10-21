@@ -64,6 +64,12 @@ class SFClientService
         return $this;
     }
 
+    public function whereRaw(string $raw, string $boolean = "AND"): self
+    {
+        $this->conditions[] = [$boolean, "($raw)"];
+        return $this;
+    }
+
     public function orWhere(array|string $conditions): self
     {
         return $this->where($conditions, "OR");
