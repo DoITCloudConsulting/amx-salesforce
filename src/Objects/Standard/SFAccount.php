@@ -11,33 +11,56 @@ class SFAccount extends SFBaseObject
 
     protected string $sObject = 'Account';
 
-    public function getByStationNumber(?string $stationNumber = null): SFAccount|array|null
+    public function getByStationNumber(?string $stationNumber = null, int $limit = 1): SFAccount|array|null
     {
-        $stationNumber ??= $this->IATA__c ?? $this->Branches__c ?? $this->Home_IATA__c ?? $this->Codigo__c;
-        $recordTypeId  = $this->RecordTypeId ?? null;
+        $possibleFields = [
+            'IATA__c' => $this->IATA__c ?? null,
+            'Branches__c' => $this->Branches__c ?? null,
+            'Home_IATA__c' => $this->Home_IATA__c ?? null,
+            'Codigo__c' => $this->Codigo__c ?? null,
+        ];
 
-        if (empty($stationNumber)) {
-            throw new \InvalidArgumentException("Station number not provided or found in instance.");
+        if (!empty($stationNumber)) {
+            foreach (array_keys($possibleFields) as $field) {
+                $possibleFields[$field] = $possibleFields[$field] ?? $stationNumber;
+            }
         }
 
-        $query = $this->client()
-            ->select(['Id', 'Name', 'IATA__c', 'Branches__c', 'Home_IATA__c', 'Codigo__c', 'RecordType.Id', 'RecordType.Name'])
-            ->from($this->sObject)
-            ->where([
-                ['IATA__c', '=', $stationNumber],
-                ['Branches__c', '=', $stationNumber],
-                ['Home_IATA__c', '=', $stationNumber],
-                ['Codigo__c', '=', $stationNumber],
-            ], 'OR');
+        $conditions = [];
+        foreach ($possibleFields as $field => $value) {
+            if (!empty($value)) {
+                $conditions[] = [$field, '=', $value];
+            }
+        }
 
-        if ($recordTypeId) {
-            $query->where(['RecordType.Id', '=', $recordTypeId]);
+        if (empty($conditions)) {
+            throw new \InvalidArgumentException("No station number fields provided in instance or parameter.");
+        }
+
+        // 4️⃣ Construir la query
+        $query = $this->client()
+            ->select([
+                'Id',
+                'Name',
+                'IATA__c',
+                'Branches__c',
+                'Home_IATA__c',
+                'Codigo__c',
+                'RecordType.Id',
+                'RecordType.Name'
+            ])
+            ->from($this->sObject)
+            ->where($conditions, 'OR')
+            ->limit($limit);
+
+        if (!empty($this->RecordTypeId)) {
+            $query->where(['RecordType.Id', '=', $this->RecordTypeId]);
         }
 
         $response = $query->execute();
-
         return $this->hydrateResponse($response);
     }
+
 
     public function getByParent(string $parentId): SFAccount|array|null
     {
@@ -67,8 +90,15 @@ class SFAccount extends SFBaseObject
     {
         $response = $this->client()
             ->select([
-                'Id', 'Home_IATA__c', 'IATA__c', 'Branches__c',
-                'RecordType.Name', 'Tipo_de_Cliente__c', 'Name', 'Codigo__c', 'Tipo_de_grupo__c'
+                'Id',
+                'Home_IATA__c',
+                'IATA__c',
+                'Branches__c',
+                'RecordType.Name',
+                'Tipo_de_Cliente__c',
+                'Name',
+                'Codigo__c',
+                'Tipo_de_grupo__c'
             ])
             ->from($this->sObject)
             ->where([

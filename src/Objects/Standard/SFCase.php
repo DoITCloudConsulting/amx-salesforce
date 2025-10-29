@@ -24,26 +24,32 @@ class SFCase extends SFBaseObject
             ],
         ]);
 
-        if (!empty($caseData['Status'])) {
-            $this->client()->object("$this->sObject/Id/{$newCase['id']}", [
-                'Status' =>  $caseData["case"]["status"],
-                'Corporativo__c' => $issuer["Id"],
-                'se_cobra__c' => $issuer["Id"],
-                'CurrencyIsoCode' => "USD",
-                'Monto_Waiver__c' => $caseData["case"]["waiver"],
+
+        if (!empty($caseData["case"]['status'])) {
+
+            $this->client()->object("$this->sObject/Id/{$newCase['Id']}", [
+                'method' => 'patch',
+                'body' => [
+                    'Status' =>  $caseData["case"]["status"],
+                    'Corporativo__c' => $issuer->Id,
+                    'se_cobra__c' => $issuer->Id,
+                    'CurrencyIsoCode' => "USD",
+                    'Monto_Waiver__c' => $caseData["case"]["waiver"],
+                ]
             ]);
         }
 
-        return $this->findById($newCase['id'], ['Id', 'CaseNumber', 'codigo_it__c'])->toArray();
+
+        return $this->findById($newCase['Id'], ['Id', 'CaseNumber', 'codigo_it__c']);
     }
 
     public function create(array $data)
     {
-        return $this->client()->custom('/pushBookingData', [
+        return json_decode($this->client()->custom('/pushBookingData', [
             'method' => 'POST',
             'body' => [
                 "sdbt" => json_encode($data)
             ]
-        ]);
+        ]), true);
     }
 }

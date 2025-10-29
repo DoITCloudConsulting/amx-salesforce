@@ -4,6 +4,8 @@ namespace Amx\Salesforce\Traits\Standard;
 
 trait SFCaseFields
 {
+    public ?string $Id = null;
+
     /** Master Record ID */
     public ?string $MasterRecordId = null;
 

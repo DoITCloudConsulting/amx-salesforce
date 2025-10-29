@@ -19,6 +19,8 @@ abstract class SFBaseObject
             self::$client = new SFClientService();
         }
 
+        // hidrata automáticamente propiedades declaradas (como Branches__c)
+        $this->hydrate($attributes);
         $this->attributes = $attributes;
     }
 
@@ -47,7 +49,7 @@ abstract class SFBaseObject
         $this->attributes[$key] = $value;
     }
 
-    public function findById(string $id, array $fields, int $limit = 1): static
+    public function findById(string $id, array $fields, int $limit = 1)
     {
         $record = self::$client
             ->select($fields)
@@ -56,7 +58,7 @@ abstract class SFBaseObject
             ->limit($limit)
             ->execute();
 
-        return $this->hydrateResponse($record);
+        return $record;
     }
 
     public function save(): array
@@ -80,14 +82,16 @@ abstract class SFBaseObject
         }
 
         // 🔹 Filtra campos válidos (como antes)
-        $filtered = array_filter($describe['fields'], fn(array $f) =>
+        $filtered = array_filter(
+            $describe['fields'],
+            fn(array $f) =>
             !$f['deprecatedAndHidden'] &&
-            !$f['defaultedOnCreate'] &&
-            !$f['calculated'] &&
-            ($f['createable'] || $f['updateable'] || $f['filterable']) &&
-            !str_starts_with($f['name'], 'Jigsaw') &&
-            !str_contains($f['name'], '__History') &&
-            !str_contains($f['name'], 'DataDotCom')
+                !$f['defaultedOnCreate'] &&
+                !$f['calculated'] &&
+                ($f['createable'] || $f['updateable'] || $f['filterable']) &&
+                !str_starts_with($f['name'], 'Jigsaw') &&
+                !str_contains($f['name'], '__History') &&
+                !str_contains($f['name'], 'DataDotCom')
         );
 
         // 🔹 Convierte a estructura más simple
