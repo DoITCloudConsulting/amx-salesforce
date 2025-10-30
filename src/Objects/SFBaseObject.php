@@ -163,19 +163,25 @@ abstract class SFBaseObject
         return $fields;
     }
 
-    public function hydrate(array $data): static
+    public function hydrate(array $data, string $prefix = ''): static
     {
         foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                foreach ($value as $subKey => $subValue) {
-                    $flatKey = "{$key}_{$subKey}";
+            // Crea una clave aplanada si hay prefijo
+            $flatKey = $prefix ? "{$prefix}_{$key}" : $key;
 
-                    if (property_exists($this, $flatKey)) {
-                        $this->$flatKey = $subValue;
-                    }
+            if (is_array($value)) {
+                // Si el array contiene objetos o arrays anidados (como "RecordType" o "attributes"), llamamos recursivamente
+                $hasAssoc = array_keys($value) !== range(0, count($value) - 1);
+                if ($hasAssoc) {
+                    $this->hydrate($value, $flatKey);
                 }
-            } elseif (property_exists($this, $key)) {
-                $this->$key = $value;
+            } else {
+                // Si la propiedad existe en el objeto, la asigna
+                if (property_exists($this, $flatKey)) {
+                    $this->$flatKey = $value;
+                }
+                // También la guarda en attributes[] por si no está declarada explícitamente
+                $this->attributes[$flatKey] = $value;
             }
         }
 

@@ -47,7 +47,10 @@ class SFAccount extends SFBaseObject
                 'Home_IATA__c',
                 'Codigo__c',
                 'RecordType.Id',
-                'RecordType.Name'
+                'RecordType.Name',
+                'Cuenta_Principal_NG__c',
+                'Cuenta_Principal_NG2__c',
+                'ParentId'
             ])
             ->from($this->sObject)
             ->where($conditions, 'OR')
