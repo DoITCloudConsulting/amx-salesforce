@@ -15,7 +15,7 @@ class SyncSalesforceObject extends Command
 
     public function __construct()
     {
-        parent::__construct('amx-salesforce:sync');
+        parent::__construct('amx-salesforce:sync-object');
     }
 
     protected function configure()
