@@ -16,11 +16,23 @@ class SFTracker_Trade_Site extends SFBaseObject
         return array_merge($this->getBaseFields(), $this->getTracker_Trade_SiteFields());
     }
 
-    public function create(SFTracker_Trade_Site $tracker): array | null
+    public function create(?SFTracker_Trade_Site $tracker = null): array|null
     {
-        return json_decode($this->client()->object('Tracker_Trade_Site__c', [
+        $instance = $tracker ?? $this;
+
+        $payload = $instance->toArray();
+        
+        if (empty($payload)) {
+            throw new \InvalidArgumentException(
+                'No data provided to create Tracker_Trade_Site record. You must either instantiate with data or pass an instance to create().'
+            );
+        }
+
+        $response = $this->client()->object($this->sObject, [
             'method' => 'POST',
-            'body' => $tracker
-        ]), true);
+            'body'   => $payload,
+        ]);
+
+        return json_decode($response, true);
     }
 }
