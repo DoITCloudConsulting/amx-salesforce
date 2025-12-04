@@ -52,4 +52,24 @@ class SFCase extends SFBaseObject
             ]
         ]), true);
     }
+
+    public function updateCaseWithWaiver(string $caseId, string $status, string $idEmisora, string $waiverCostId, float $waiverAmount, string $currency): SFCase|array|null
+    {
+        $payload = [
+            'Status' => $status,
+            'Agencia_Emisora__c' => $idEmisora,
+            'Costo_de_Waivers__c' => $waiverCostId,
+            'Corporativo__c' => $idEmisora,
+            'se_cobra__c' => $idEmisora,
+            'Monto_Waiver__c' => $waiverAmount,
+            'CurrencyIsoCode' => $currency
+        ];
+
+        $response = $this->client()->object("{$this->sObject}/{$caseId}", [
+            'method' => 'patch',
+            'body' => $payload
+        ]);
+
+        return $this->hydrateResponse(['records' => [$response]]);
+    }
 }

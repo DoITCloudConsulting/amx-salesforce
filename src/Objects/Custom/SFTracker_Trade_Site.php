@@ -35,4 +35,16 @@ class SFTracker_Trade_Site extends SFBaseObject
 
         return json_decode($response, true);
     }
+
+    public function getByHerokuId(string $herokuId): SFTracker_Trade_Site|null
+    {
+        $response = $this->client()
+            ->select(['Id'])
+            ->from($this->sObject)
+            ->where(['Heroku_Id__c', '=', $herokuId])
+            ->limit(1)
+            ->execute();
+
+        return $this->hydrateResponse($response);
+    }
 }
